@@ -1,0 +1,34 @@
+{
+  "compositional_suite_recipe": 1,
+  "engine_version": "1.0.0",
+  "global": {
+    "n_monomers": 2,
+    "n_chains": 2000,
+    "r_values": [
+      [
+        10.0
+      ],
+      [
+        10.0
+      ]
+    ],
+    "ctp": 1.0,
+    "seed": 23,
+    "prune_dp": 0
+  },
+  "blocks": [
+    {
+      "mrs": [
+        50.0,
+        50.0
+      ],
+      "dp": 100,
+      "conversion": 99.0,
+      "purge": false
+    }
+  ],
+  "ui": {
+    "tab": "simulator",
+    "case": "4.4-blocky-copolymer"
+  }
+}

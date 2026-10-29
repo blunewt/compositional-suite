@@ -1,0 +1,38 @@
+{
+  "compositional_suite_recipe": 2,
+  "engine_version": "2.1.0",
+  "global": {
+    "n_monomers": 2,
+    "n_chains": 5000,
+    "r_values": [
+      [
+        1.0
+      ],
+      [
+        1.0
+      ]
+    ],
+    "ctr": 10.0,
+    "prune_dp": 0
+  },
+  "blocks": [
+    {
+      "mrs": [
+        50.0,
+        50.0
+      ],
+      "dp": 60,
+      "conversion": 100.0,
+      "purge": true
+    }
+  ],
+  "ui": {
+    "tab": "simulator",
+    "target_pdi": {
+      "enabled": false,
+      "value": 1.5
+    },
+    "retain_monomers": false,
+    "show_absolute_consumption": false
+  }
+}

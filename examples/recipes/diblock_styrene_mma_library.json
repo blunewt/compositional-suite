@@ -1,0 +1,36 @@
+{
+  "compositional_suite_recipe": 2,
+  "engine_version": "2.1.0",
+  "global": {
+    "n_monomers": 2,
+    "n_chains": 5000,
+    "monomer_names": [
+      "Styrene",
+      "Methyl methacrylate"
+    ],
+    "r_values": "library",
+    "ctr": 50,
+    "seed": 7,
+    "prune_dp": 0
+  },
+  "blocks": [
+    {
+      "mrs": [
+        95,
+        5
+      ],
+      "dp": 60,
+      "conversion": 60,
+      "purge": false
+    },
+    {
+      "mrs": [
+        5,
+        95
+      ],
+      "dp": 60,
+      "conversion": 60,
+      "purge": true
+    }
+  ]
+}

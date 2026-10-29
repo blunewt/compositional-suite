@@ -1,0 +1,212 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Install exactly as a user would, then run the test suite (including an
+  # off-screen GUI smoke test) and the CLI end to end.
+  smoke:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25          # a hung test must not burn hours of build time
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # PyQt5 links against libGL, which the GitHub Ubuntu images do not ship.
+      # Without these, importing the GUI module fails with
+      # "libGL.so.1: cannot open shared object file". Not needed on Windows.
+      - name: Qt system libraries (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libdbus-1-3
+
+      # Plain install first, with no extras: this is the step that would have
+      # caught a missing runtime dependency (seaborn) before release.
+      - name: Install (no extras)
+        run: pip install .
+
+      - name: GUI module imports with only the declared dependencies
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -c "from compositional_suite.app import main; from compositional_suite import reactivity_library as rl; assert rl.available(), 'library data not packaged'; print('ok')"
+
+      - name: Install extras for tests
+        run: pip install ".[all,test]"
+
+      - name: Import package and resolve entry points
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -c "import compositional_suite; print('version', compositional_suite.__version__)"
+          python -c "from compositional_suite.app import main; print('gui entry ok')"
+          python -c "from compositional_suite.headless import main; print('cli entry ok')"
+
+      - name: Test suite
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: pytest -q
+
+      - name: CLI runs end to end
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: compositional-suite-cli --config examples/recipes/sample_random_copolymer.json --out ./ci-run/ --seed 1 --quiet
+
+      - name: Release placeholders filled (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python tools/check_placeholders.py
+
+      # A release tag vX.Y.Z must match __version__ == "X.Y.Z".
+      - name: Package version matches the tag (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          v=$(python -c "import compositional_suite; print(compositional_suite.__version__)")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "__version__ $v does not match tag ${GITHUB_REF_NAME}"; exit 1; }
+
+  # Standalone Windows executable, attached to the GitHub Release on a v* tag.
+  windows-exe:
+    needs: smoke
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    # Creating a release needs write access. The default GITHUB_TOKEN is
+    # read-only in most repositories, and the upload would 403 without this.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install with build tooling
+        run: pip install ".[all,build]"
+
+      # --collect-submodules recurses into compositional_suite.sd_metrics;
+      # --collect-data bundles compositional_suite/data/reactivity_ratios.csv, which the
+      # library features need at runtime.
+      - name: Version information (file properties, DTU copyright)
+        run: python packaging/make_version_info.py packaging/version_info.txt
+
+      - name: Build executable
+        run: >
+          pyinstaller
+          --noconfirm
+          --onefile
+          --windowed
+          --name CompositionalSuite
+          --icon packaging/icon.ico
+          --version-file packaging/version_info.txt
+          --collect-submodules compositional_suite
+          --collect-data compositional_suite
+          packaging/launcher.py
+
+      - name: Executable was produced
+        run: |
+          if (-not (Test-Path dist\CompositionalSuite.exe)) { throw "CompositionalSuite.exe not found" }
+          Get-Item dist\CompositionalSuite.exe | Select-Object Name, Length
+
+      - name: Logo icon is embedded in the executable (diagnostic)
+        continue-on-error: true
+        run: python packaging/check_exe_icon.py dist/CompositionalSuite.exe
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: CompositionalSuite-windows
+          path: dist/CompositionalSuite.exe
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/CompositionalSuite.exe
+          generate_release_notes: true
+
+  # macOS application bundle (Apple silicon), attached to the same release.
+  # Runs after the Windows job so the two uploads cannot race to create the release.
+  macos-app:
+    needs: [smoke, windows-exe]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install with build tooling
+        run: pip install ".[all,build]"
+
+      - name: Build application bundle
+        run: >
+          pyinstaller
+          --noconfirm
+          --windowed
+          --name "Compositional Suite"
+          --icon packaging/icon.icns
+          --collect-submodules compositional_suite
+          --collect-data compositional_suite
+          packaging/launcher.py
+
+      - name: Application bundle was produced
+        run: test -d "dist/Compositional Suite.app"
+
+      # The app is run on a real (Apple-silicon) Mac in GitHub's cloud.
+      - name: Smoke test - run a recipe through the built app
+        run: |
+          APP="dist/Compositional Suite.app/Contents/MacOS/Compositional Suite"
+          "$APP" --config examples/recipes/diblock_styrene_mma_library.json --out smoke-out --quiet
+          test -s smoke-out/chains.csv
+          echo "OK: the built app simulated $(( $(wc -l < smoke-out/chains.csv) )) lines of chain data"
+
+      - name: Smoke test - the window starts (diagnostic)
+        continue-on-error: true
+        run: |
+          APP="dist/Compositional Suite.app/Contents/MacOS/Compositional Suite"
+          QT_QPA_PLATFORM=offscreen "$APP" > gui.log 2>&1 &
+          PID=$!
+          sleep 30
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "OK: the app is still running after 30 seconds"
+            kill "$PID"
+          else
+            echo "The app exited early:"
+            cat gui.log
+            exit 1
+          fi
+
+      - name: Zip the application
+        run: ditto -c -k --sequesterRsrc --keepParent "dist/Compositional Suite.app" dist/CompositionalSuite-macOS.zip
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: CompositionalSuite-macos
+          path: dist/CompositionalSuite-macOS.zip
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/CompositionalSuite-macOS.zip

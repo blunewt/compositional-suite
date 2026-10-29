@@ -1,0 +1,40 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+*.spec
+packaging/version_info.txt
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Simulation output
+run/
+output/
+ci-run/
+*.csv.meta.json
+
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Keep the sample recipe that ships with the repo
+!recipe.json
+
+# Local tool settings
+.claude/
+
+# Test / tooling caches
+.pytest_cache/

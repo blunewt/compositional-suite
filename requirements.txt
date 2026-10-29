@@ -1,0 +1,13 @@
+# Everything needed to run Compositional Suite from a source checkout:
+#   pip install -r requirements.txt
+#   python run_compositional_suite.py
+numpy>=1.23
+pandas>=1.5
+scipy>=1.9
+matplotlib>=3.6
+seaborn>=0.12
+PyQt5>=5.15,<6
+openpyxl>=3.0
+# optional: interactive 3D HTML export and .yaml recipe files
+plotly>=5.0
+PyYAML>=6.0

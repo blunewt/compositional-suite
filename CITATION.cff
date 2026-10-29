@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Compositional Suite: Monte Carlo simulation of multi-block radical copolymerization and sequence architecture analysis"
+type: software
+authors:
+  - family-names: Sideris
+    given-names: Charalampos
+    affiliation: "Department of Health Technology, Technical University of Denmark"
+  - family-names: Autzen
+    given-names: "Anton A. A."
+    affiliation: "Department of Health Technology, Technical University of Denmark"
+version: 1.0.0   # version of the first public release; must match the tag
+license: MIT
+repository-code: "https://github.com/blunewt/compositional-suite"
+# doi: 10.5281/zenodo.XXXXXXX   # add once Zenodo issues the DOI
+references:
+  - type: article
+    title: "Practical Prediction of Heteropolymer Composition and Drift"
+    authors:
+      - family-names: Smith
+        given-names: "Anton A. A."
+      - family-names: Hall
+        given-names: Aaron
+      - family-names: Wu
+        given-names: Vincent
+      - family-names: Xu
+        given-names: Ting
+    journal: "ACS Macro Letters"
+    year: 2019
+    volume: 8
+    issue: 1
+    start: 36
+    end: 40
+    doi: "10.1021/acsmacrolett.8b00813"

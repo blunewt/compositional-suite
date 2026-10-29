@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compositional-suite"
+dynamic = ["version"]
+description = "Stochastic copolymerisation simulation, sequence analysis, and structural-deviation metrics"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Charalampos Sideris", email = "sideris.xar@gmail.com" },
+    { name = "Anton A. A. Autzen" },
+]
+keywords = ["polymer", "copolymer", "monte-carlo", "sequence-analysis", "chemistry"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+# Declared once, resolved automatically by pip. Users never install these by hand.
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scipy>=1.9",
+    "matplotlib>=3.6",
+    "seaborn>=0.12",
+    "PyQt5>=5.15,<6",
+    "openpyxl>=3.0",
+]
+
+[project.optional-dependencies]
+# Interactive 3D descriptor-space export (Export Interactive 3D (HTML))
+export3d = ["plotly>=5.0"]
+# Save/load recipes as .yaml; JSON works without this
+yaml = ["PyYAML>=6.0"]
+# Everything a user could want
+all = ["plotly>=5.0", "PyYAML>=6.0"]
+# Building the standalone executable
+build = ["pyinstaller>=6.0"]
+# Running the test suite
+test = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/blunewt/compositional-suite"
+Repository = "https://github.com/blunewt/compositional-suite"
+Issues = "https://github.com/blunewt/compositional-suite/issues"
+
+[project.scripts]
+# GUI with no args; headless when flags are passed (--config ...). One command,
+# both modes, matching the documented behaviour of app.main().
+compositional-suite = "compositional_suite.app:main"
+# Explicit headless entry point for clusters and scripting.
+compositional-suite-cli = "compositional_suite.headless:main"
+
+[project.gui-scripts]
+# Windowed launcher (no console window on Windows); used by the desktop shortcuts.
+compositional-suite-gui = "compositional_suite.app:main"
+
+[tool.setuptools]
+packages = ["compositional_suite", "compositional_suite.sd_metrics"]
+
+# The reactivity-ratio library ships inside the package (read at runtime by
+# compositional_suite.reactivity_library). Without this it is silently left out of
+# wheels and the GUI's library features report "data file missing".
+[tool.setuptools.package-data]
+compositional_suite = ["data/*.csv", "data/*.png"]
+
+[tool.setuptools.dynamic]
+version = { attr = "compositional_suite.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
